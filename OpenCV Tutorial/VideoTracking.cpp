@@ -61,6 +61,7 @@ std::string VideoTrackingSample::getSampleIcon() const
 static bool firstRun = false;
 bool VideoTrackingSample::processFrame(const cv::Mat& inputFrame, cv::Mat& outputFrame)
 {
+    bool found = false;
     inputFrame.copyTo(outputFrame);
 
     if(!firstRun) {
@@ -77,6 +78,15 @@ bool VideoTrackingSample::processFrame(const cv::Mat& inputFrame, cv::Mat& outpu
     cv::threshold(diff, diffThreshold, 21, 255, 0);
 
     cv::cvtColor( diffThreshold, outputFrame, CV_GRAY2BGRA );
+    
+    for (int x=0; x<diffThreshold.rows; x++) {
+        for(int y=0; y<diffThreshold.cols; y++){
+            if(diffThreshold.at<uchar>(x,y)>0&&!found){
+                found = true;
+                printf("Found at x:%i, y:%i",x,y);
+            }
+        }
+    }
     
     return true;
     
