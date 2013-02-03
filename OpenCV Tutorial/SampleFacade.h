@@ -8,11 +8,11 @@
 
 #import <Foundation/Foundation.h>
 #import "SampleBase.h"
-
+#import "AsyncUdpSocket.h"
 typedef std::vector<SampleOption*> OptionsSection;
 typedef std::map<std::string, OptionsSection> OptionsMap;
 
-@interface SampleFacade : NSObject
+@interface SampleFacade : NSObject <AsyncUdpSocketDelegate>
 
 - (id) initWithSample:(SampleBase*) sample;
 

@@ -52,56 +52,44 @@ static bool keypoint_score_greater(const cv::KeyPoint& kp1, const cv::KeyPoint& 
 }
 
 //! Processes a frame and returns output image
-static cv::Mat prevImage;
-static int runs = 0;
 bool FeatureDetectionSample::processFrame(const cv::Mat& inputFrame, cv::Mat& outputFrame)
 {
-    // convert input frame to gray scale
-    cv::Mat currentGrayImage;
-    getGray(inputFrame, currentGrayImage);
+    cv::Mat hsv;
+    cv::cvtColor(inputFrame, hsv, CV_BGR2HSV);
     
-    if(runs == 0 || runs == 10) {
-        getGray(inputFrame, prevImage);
-        printf("setting prevImage\n");
-        
-    }
-    runs += 1;
+    std::vector<cv::Mat> channels;
+    cv::split(hsv, channels);
     
-    cv::Mat grayImage1 = prevImage - currentGrayImage;
-    cv::Mat grayImage2 = currentGrayImage - prevImage;
-    grayImage = grayImage1 + grayImage2;
+    cv::Mat computation = channels[0].mul(channels[1]/255.0).mul(channels[2]/255.0);
     
-    cv::Mat blurGrayImage;
-    cv::boxFilter(grayImage, blurGrayImage, 0, cv::Size (10,10));
-    blurGrayImage.copyTo(grayImage);
-    
-    cv::Mat thresholdGrayImage;
-    cv::threshold(grayImage, thresholdGrayImage, 20, 255, 0);
-//    thresholdGrayImage.copyTo(grayImage);
-    
-    cv::Mat edges;
-    cv::Canny(thresholdGrayImage, edges, 50, 150);
-    
-    std::vector< std::vector<cv::Point> > contours;
-    
-    cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-    printf("CONTOURS SIZE IS %lu\n",contours.size());
-    
-    objectKeypoints.clear();
-    
-    for(int i=0; i<contours.size(); i++) {
-        for(int j=0; j<contours[i].size(); j++) {
-            cv::KeyPoint pt (contours[i][j].x,contours[i][j].y,5);
-            objectKeypoints.push_back(pt);
+    int brightest_x = 0;
+    int brightest_y = 0;
+    int brightest_val = 0;
+    for(int x = 0; x < computation.cols; x++) {
+        for(int y = 0; y < computation.rows; y++) {
+            if(computation.at<uchar>(y,x) > brightest_val) {
+                brightest_val = computation.at<uchar>(y,x);
+                brightest_x = x;
+                brightest_y = y;
+            }
         }
     }
-
+    
+    objectKeypoints.clear();
+    objectKeypoints.push_back(cv::KeyPoint(brightest_x, brightest_y, 50));
+    
+    cv::Mat blur;
+    cv::blur(computation, blur, cv::Size(5,5));
+    blur.copyTo(computation);
+    
     cv::Mat t;
-    cv::cvtColor(grayImage, t, CV_GRAY2BGR);
+    cv::cvtColor(computation, t, CV_GRAY2BGR);
     cv::drawKeypoints(t, objectKeypoints, t, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     
     cv::cvtColor(t, outputFrame, CV_BGR2BGRA);
     
-//    currentGrayImage.copyTo(prevImage);
+    topX = brightest_x;
+    topY = brightest_y;
+    
     return true;
 }

@@ -45,7 +45,9 @@ public:
     typedef std::map<std::string, OptionsSection> OptionsMap;
     
     const OptionsMap& getOptions() const;
-    
+    double topX;
+    double topY;
+
 protected:
     void registerOption(std::string name, std::string section, bool  * value);
     void registerOption(std::string name, std::string section, int   *  value, int min, int max);

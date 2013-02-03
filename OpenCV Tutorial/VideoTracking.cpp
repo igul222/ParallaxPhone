@@ -6,6 +6,7 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include <unistd.h>
 #include <iostream>
 #include "VideoTracking.hpp"
 
@@ -60,8 +61,7 @@ std::string VideoTrackingSample::getSampleIcon() const
 
 static bool firstRun = false;
 bool VideoTrackingSample::processFrame(const cv::Mat& inputFrame, cv::Mat& outputFrame)
-{
-    bool found = false;
+{    
     inputFrame.copyTo(outputFrame);
 
     if(!firstRun) {
@@ -74,16 +74,36 @@ bool VideoTrackingSample::processFrame(const cv::Mat& inputFrame, cv::Mat& outpu
     
     cv::Mat diff = m_nextImg - m_prevImg;
     
-    cv::Mat diffThreshold;
-    cv::threshold(diff, diffThreshold, 21, 255, 0);
-
-    cv::cvtColor( diffThreshold, outputFrame, CV_GRAY2BGRA );
+    cv::Mat computation;
+    cv::adaptiveThreshold(diff,
+                          computation,
+                          255,
+                          cv::ADAPTIVE_THRESH_MEAN_C,
+                          cv::THRESH_BINARY,
+                          5,
+                          -15);
+//    cv::threshold(diff, computation, 21, 255, cv::THRESH_BINARY);
     
-    for (int x=0; x<diffThreshold.rows; x++) {
-        for(int y=0; y<diffThreshold.cols; y++){
-            if(diffThreshold.at<uchar>(x,y)>0&&!found){
+    cv::Mat display;
+    cv::adaptiveThreshold(diff,
+                          display,
+                          255,
+                          cv::ADAPTIVE_THRESH_MEAN_C,
+                          cv::THRESH_BINARY,
+                          501,
+                          -21);
+    
+    
+    cv::cvtColor( display, outputFrame, CV_GRAY2BGRA );
+    
+    bool found = false;
+    for (int x=0; x<computation.rows; x++) {
+        for(int y=0; y<computation.cols; y++) {
+            if(computation.at<uchar>(x,y) > 0 && !found){
                 found = true;
-                printf("Found at x:%i, y:%i",x,y);
+                topX = computation.rows - x;
+                topY = y;
+                break;
             }
         }
     }

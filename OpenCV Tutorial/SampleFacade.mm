@@ -9,6 +9,7 @@
 #import "SampleFacade.h"
 #import "NSString+StdString.h"
 #import "UIImage2OpenCV.h"
+#import <Foundation/Foundation.h>
 
 @interface SampleFacade()
 {
@@ -18,6 +19,8 @@
     UIImage  * m_largeIcon;
     
     SampleBase * _sample;
+    
+    AsyncUdpSocket *socket;
 }
 
 @end
@@ -33,6 +36,7 @@
     if (self = [super init])
     {
         _sample = s;
+        socket = [[AsyncUdpSocket alloc] initWithDelegate:self];
     }
     
     return self;
@@ -101,7 +105,18 @@
 
 - (bool) processFrame:(const cv::Mat&) inputFrame into:(cv::Mat&) outputFrame
 {
-    return _sample->processFrame(inputFrame, outputFrame);
+    bool result = _sample->processFrame(inputFrame, outputFrame);
+    
+    NSDictionary *dict = @{@"x": @(_sample->topX), @"y": @(_sample->topY)};
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
+    
+    [socket sendData:data
+              toHost:@"67.194.73.12"
+                port:8888
+         withTimeout:-1
+                 tag:0];
+    
+    return result;
 }
 
 - (UIImage*) processFrame:(UIImage*) source
@@ -112,6 +127,9 @@
     _sample->processFrame(inputImage, outputImage);
     UIImage * result = [UIImage imageWithMat:outputImage andImageOrientation:[source imageOrientation]];
     return result;
+}
+
+-(void)onUdpSocket:(AsyncUdpSocket *)sock didSendDataWithTag:(long)tag {
 }
 
 - (NSString *) friendlyName
